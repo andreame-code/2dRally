@@ -40,7 +40,7 @@ class Game:
                 if event.type == pygame.QUIT:
                     self.running = False
             throttle, brake, steering = get_input()
-            dt = self.clock.get_time() / 1000.0
+            dt = self.clock.tick(60) / 1000.0
             self.physics.update(throttle, brake, steering, dt)
             self.camera.update(self.physics.position)
             self.screen.fill((0, 0, 0))
@@ -48,7 +48,6 @@ class Game:
             car_rect.center = (400, 300)
             pygame.draw.rect(self.screen, (255, 0, 0), car_rect)
             pygame.display.flip()
-            self.clock.tick(60)
 
 
 if __name__ == "__main__":
