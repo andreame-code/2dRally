@@ -1,4 +1,5 @@
 import os
+import sys
 import pygame
 from game.physics import CarPhysics
 from game.camera import Camera
@@ -7,7 +8,19 @@ from game.track_loader import load_random_track
 
 
 def init_pygame():
-    os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
+    """Initialize Pygame, supporting headless environments.
+
+    The SDL ``dummy`` video driver is enabled automatically when no display is
+    detected (e.g. in CI) or when the ``PYGAME_HEADLESS`` environment variable is
+    set to ``1``.  Setting ``PYGAME_HEADLESS`` to ``0`` forces the normal video
+    driver even if no display is present.
+    """
+
+    headless_env = os.getenv("PYGAME_HEADLESS")
+    if headless_env == "1" or (
+        headless_env is None and os.environ.get("DISPLAY") is None and sys.platform != "win32"
+    ):
+        os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
     pygame.init()
     return pygame.display.set_mode((800, 600))
 
