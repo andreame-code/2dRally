@@ -7,7 +7,7 @@ utilizzando la libreria Pygame.
 
 ## Stato attuale
 Il progetto è nelle fasi iniziali e non include ancora il gameplay completo.
-Il file `src/main.py` fornisce un segnaposto da cui iniziare lo sviluppo.
+Il file `src/main.py` contiene un loop Pygame minimale da cui iniziare lo sviluppo.
 
 ## Dipendenze
 - Python 3.x
