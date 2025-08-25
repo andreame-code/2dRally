@@ -47,7 +47,11 @@ class Game:
             self.camera.update(self.physics.position)
             self.screen.fill((0, 0, 0))
             car_rect = pygame.Rect(0, 0, 40, 20)
-            car_rect.center = (400, 300)
+            draw_pos = (
+                int(self.physics.position.x - self.camera.position[0]),
+                int(self.physics.position.y - self.camera.position[1]),
+            )
+            car_rect.center = draw_pos
             pygame.draw.rect(self.screen, (255, 0, 0), car_rect)
             pygame.display.flip()
 
