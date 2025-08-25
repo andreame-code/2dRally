@@ -23,6 +23,21 @@ Il file `src/main.py` contiene un loop Pygame minimale da cui iniziare lo svilup
    python src/main.py
    ```
 
+### Modalità headless
+In ambienti senza display (ad esempio integrazione continua), il gioco può
+essere eseguito in modalità *headless* utilizzando il driver video ``dummy``.
+Per forzare la modalità headless è possibile impostare la variabile
+``PYGAME_HEADLESS`` a ``1`` prima di avviare lo script:
+
+```bash
+PYGAME_HEADLESS=1 python src/main.py
+```
+
+Impostando ``PYGAME_HEADLESS`` a ``0`` si disabilita la modalità headless,
+forzando l'uso del driver video standard. Se la variabile non è definita, la
+modalità headless viene attivata automaticamente solo quando non è rilevato
+alcun display.
+
 ## Controlli da tastiera
 - **Freccia su** – accelera
 - **Freccia giù** – frena o retromarcia
