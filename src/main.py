@@ -39,6 +39,8 @@ class Game:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    self.running = False
             throttle, brake, steering = get_input()
             dt = self.clock.tick(60) / 1000.0
             self.physics.update(throttle, brake, steering, dt)
