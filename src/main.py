@@ -1,44 +1,42 @@
-"""Entry point for the 2dRally prototype.
-
-Il file fornisce un loop di gioco minimale basato su Pygame.
-"""
-
 import os
-import sys
-
 import pygame
+from game.physics import CarPhysics
+from game.camera import Camera
+from game.input_handler import get_input
+from game.track_loader import load_random_track
 
 
-WINDOW_SIZE = (800, 600)
-USE_DUMMY_VIDEO = os.environ.get("SDL_VIDEODRIVER") == "dummy"
-
-
-def main() -> None:
-    """Inizializza Pygame e avvia il loop principale."""
+def init_pygame():
+    os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
     pygame.init()
-    screen = pygame.display.set_mode(WINDOW_SIZE)
-    pygame.display.set_caption("2dRally")
-    clock = pygame.time.Clock()
+    return pygame.display.set_mode((800, 600))
 
-    running = True
-    while running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                running = False
 
-        screen.fill((0, 0, 0))
-        pygame.display.flip()
-        clock.tick(60)
+class Game:
+    def __init__(self):
+        self.screen = init_pygame()
+        self.clock = pygame.time.Clock()
+        self.running = True
+        self.physics = CarPhysics()
+        self.camera = Camera(offset=(400, 300))
+        self.track = load_random_track()
 
-        if USE_DUMMY_VIDEO:
-            # Evita loop infinito negli ambienti senza display.
-            running = False
-
-    pygame.quit()
-    sys.exit()
+    def run(self):
+        while self.running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+            throttle, brake, steering = get_input()
+            dt = self.clock.get_time() / 1000.0
+            self.physics.update(throttle, brake, steering, dt)
+            self.camera.update(self.physics.position)
+            self.screen.fill((0, 0, 0))
+            car_rect = pygame.Rect(0, 0, 40, 20)
+            car_rect.center = (400, 300)
+            pygame.draw.rect(self.screen, (255, 0, 0), car_rect)
+            pygame.display.flip()
+            self.clock.tick(60)
 
 
 if __name__ == "__main__":
-    main()
+    Game().run()
