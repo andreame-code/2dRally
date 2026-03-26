@@ -14,14 +14,18 @@ function addSegment(segments, curve, count, palette = 0) {
 export function createTrack() {
   const segments = [];
 
-  addSegment(segments, 0, 40);
-  addSegment(segments, 0.0012, 60);
   addSegment(segments, 0, 30);
-  addSegment(segments, -0.0015, 85);
+  addSegment(segments, 0.0009, 40);
+  addSegment(segments, 0.0015, 30);
+  addSegment(segments, 0.0005, 25);
+  addSegment(segments, 0, 15);
+  addSegment(segments, -0.0012, 55);
+  addSegment(segments, -0.0018, 25);
   addSegment(segments, 0, 20);
-  addSegment(segments, 0.0018, 70);
-  addSegment(segments, -0.001, 50);
-  addSegment(segments, 0, 60);
+  addSegment(segments, 0.0013, 45);
+  addSegment(segments, -0.001, 35);
+  addSegment(segments, 0.0007, 30);
+  addSegment(segments, 0, 25);
 
   return {
     segments,
