@@ -1,7 +1,9 @@
 import { segmentIndexAtZ } from './track.js';
 
 const FOV = 100;
-const CAMERA_HEIGHT = 900;
+// World Y units are in "road widths", so the camera height must stay low.
+// A very large value flattens every segment to the screen bottom and the road disappears.
+const CAMERA_HEIGHT = 1.15;
 const DRAW_DISTANCE = 220;
 const ROAD_BOTTOM_HALF_WIDTH_RATIO = 0.34;
 const ROAD_TOP_HALF_WIDTH_RATIO = 0.085;
