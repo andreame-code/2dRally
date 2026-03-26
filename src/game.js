@@ -19,12 +19,21 @@ export class Game {
   reset() {
     this.state = 'start';
     this.distance = 0;
+    this.score = 0;
+    this.avgSpeed = 0;
+    this.runTime = 0;
     this.cameraZ = 0;
     this.cameraX = 0;
     this.player.laneOffset = 0;
+    this.player.laneVelocity = 0;
+    this.player.steering = 0;
     this.player.speed = 0;
     this.offRoad = false;
     this.flashTimer = 0;
+    this.controlLoss = 0;
+    this.shake = 0;
+    this.obstacleSpawnTimer = 0;
+    this.aiSpawnTimer = 0;
 
     this.obstacles = [
       createObstacle(this.track.length, -0.55, 1000),
@@ -54,7 +63,9 @@ export class Game {
     this.updatePlayer(dt);
     this.updateCamera(dt);
     this.updateTraffic(dt);
+    this.updateGameplay(dt);
     this.handleCollisions();
+    this.updateEffects(dt);
   }
 
   updatePlayer(dt) {
@@ -72,16 +83,33 @@ export class Game {
 
     const seg = this.track.segments[segmentIndexAtZ(this.track, this.cameraZ)];
     const curveForce = seg.curve * (0.8 + p.speed / p.maxSpeed * 2.1);
-    this.player.laneOffset -= curveForce * dt * 140;
+    p.laneVelocity -= curveForce * dt * 115;
 
-    const steerStrength = p.steerPower * (0.25 + p.speed / p.maxSpeed * 0.95);
-    if (steerLeft) p.laneOffset -= steerStrength * dt;
-    if (steerRight) p.laneOffset += steerStrength * dt;
+    const steerTarget = (steerRight ? 1 : 0) - (steerLeft ? 1 : 0);
+    p.steering += (steerTarget - p.steering) * Math.min(1, p.steerResponse * dt);
 
+    const speedFactor = 0.3 + p.speed / p.maxSpeed;
+    p.laneVelocity += p.steering * p.steerPower * dt * speedFactor;
+
+    const highSpeed = Math.max(0, (p.speed - p.maxSpeed * 0.62) / p.maxSpeed);
+    const driftFactor = highSpeed * (Math.abs(p.steering) + Math.abs(seg.curve) * 180);
+    p.laneVelocity *= 1 - Math.min(0.23, driftFactor * 0.04);
+    p.laneVelocity *= 1 - Math.min(0.98, p.steerFriction * dt);
+
+    p.laneOffset += p.laneVelocity;
     this.offRoad = Math.abs(p.laneOffset) > 0.95;
+    const grip = this.offRoad ? p.offRoadGrip : p.driftGrip;
+    p.laneVelocity *= grip;
+
     if (this.offRoad) {
-      p.speed -= 130 * dt;
+      p.speed -= 140 * dt;
+      p.laneVelocity += (Math.random() - 0.5) * 0.002;
       p.laneOffset = Math.max(-1.25, Math.min(1.25, p.laneOffset));
+    }
+
+    if (this.controlLoss > 0) {
+      this.controlLoss -= dt;
+      p.laneVelocity += Math.sin(performance.now() * 0.03) * 0.0008;
     }
   }
 
@@ -105,6 +133,45 @@ export class Game {
     });
   }
 
+  updateGameplay(dt) {
+    this.runTime += dt;
+    this.avgSpeed += (this.player.speed - this.avgSpeed) * Math.min(1, dt * 0.7);
+    this.score = Math.floor(this.distance + this.avgSpeed * 4.2);
+
+    this.obstacleSpawnTimer -= dt;
+    if (this.obstacleSpawnTimer <= 0) {
+      this.spawnObstacle();
+      this.obstacleSpawnTimer = 1.2 + Math.random() * 1.5;
+    }
+
+    this.aiSpawnTimer -= dt;
+    if (this.aiSpawnTimer <= 0 && this.aiCars.length < 6) {
+      this.spawnAiCar();
+      this.aiSpawnTimer = 2.8 + Math.random() * 2.2;
+    }
+  }
+
+  updateEffects(dt) {
+    this.flashTimer = Math.max(0, this.flashTimer - dt);
+    this.shake = Math.max(0, this.shake - dt * 2.4);
+  }
+
+  spawnObstacle() {
+    const spawnZ = wrapZ(this.track, this.cameraZ + 900 + Math.random() * 1200);
+    const lanes = [-0.58, -0.35, -0.1, 0.12, 0.37, 0.62];
+    const lane = lanes[Math.floor(Math.random() * lanes.length)];
+    this.obstacles.push(createObstacle(this.track.length, lane, spawnZ));
+    if (this.obstacles.length > 15) this.obstacles.shift();
+  }
+
+  spawnAiCar() {
+    const spawnZ = wrapZ(this.track, this.cameraZ + 1200 + Math.random() * 1700);
+    const lane = -0.5 + Math.random();
+    const speed = 90 + Math.random() * 65;
+    this.aiCars.push(createAiCar(this.track.length, lane, spawnZ, speed));
+    if (this.aiCars.length > 7) this.aiCars.shift();
+  }
+
   handleCollisions() {
     const hitWindow = 55;
     let hit = false;
@@ -113,7 +180,12 @@ export class Game {
       const dz = (obstacle.z - this.cameraZ + this.track.length) % this.track.length;
       if (dz < hitWindow && Math.abs(obstacle.laneOffset - this.player.laneOffset) < 0.24) {
         obstacle.z = wrapZ(this.track, obstacle.z + 1400 + Math.random() * 800);
-        this.player.speed *= 0.42;
+        const impact = obstacle.type === 'hole' ? 0.5 : obstacle.type === 'rock' ? 0.42 : 0.56;
+        this.player.speed *= impact;
+        this.player.laneVelocity += (Math.random() - 0.5) * 0.05;
+        this.controlLoss = Math.max(this.controlLoss, obstacle.type === 'hole' ? 0.85 : 0.7);
+        this.shake = 0.45;
+        this.flashTimer = 0.2;
         hit = true;
       }
     }
@@ -121,7 +193,11 @@ export class Game {
     for (const ai of this.aiCars) {
       const dz = (ai.z - this.cameraZ + this.track.length) % this.track.length;
       if (dz < hitWindow && Math.abs(ai.laneOffset - this.player.laneOffset) < 0.26) {
-        this.player.speed *= 0.68;
+        this.player.speed *= 0.7;
+        this.player.laneVelocity += (Math.random() - 0.5) * 0.04;
+        this.controlLoss = Math.max(this.controlLoss, 0.45);
+        this.shake = 0.3;
+        this.flashTimer = 0.12;
         hit = true;
       }
     }
