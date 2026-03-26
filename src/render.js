@@ -1,4 +1,4 @@
-import { segmentIndexAtZ, wrapZ } from './track.js';
+import { segmentIndexAtZ } from './track.js';
 
 const FOV = 100;
 const CAMERA_HEIGHT = 900;
@@ -101,6 +101,7 @@ function drawRoad(ctx, game, width, height) {
   const { track, cameraZ } = game;
   const horizon = Math.floor(height * 0.35);
   const baseIndex = segmentIndexAtZ(track, cameraZ);
+  const baseSegmentZ = Math.floor(cameraZ / track.segmentLength) * track.segmentLength;
   const roadSpan = Math.max(1, height - horizon);
   const dashedOffset = Math.floor(game.distance * 0.08);
 
@@ -112,8 +113,8 @@ function drawRoad(ctx, game, width, height) {
     const segIndex = (baseIndex + n) % track.segments.length;
     const segment = track.segments[segIndex];
 
-    const z1 = wrapZ(track, Math.floor(cameraZ / track.segmentLength) * track.segmentLength + n * track.segmentLength);
-    const z2 = wrapZ(track, z1 + track.segmentLength);
+    const z1 = baseSegmentZ + n * track.segmentLength;
+    const z2 = z1 + track.segmentLength;
 
     const p1 = projectPoint(x, 0, z1, game.cameraX, CAMERA_HEIGHT, cameraZ, width, height, track.roadHalfWidth);
     x += dx;
