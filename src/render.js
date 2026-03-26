@@ -113,10 +113,8 @@ function drawRoad(ctx, game, width, height) {
     const segIndex = (baseIndex + n) % track.segments.length;
     const segment = track.segments[segIndex];
 
-    const z1 = baseSegmentZ + n * track.segmentLength;
-    const z2 = z1 + track.segmentLength;
+    const z2 = baseSegmentZ + (n + 1) * track.segmentLength;
 
-    const p1 = projectPoint(x, 0, z1, game.cameraX, CAMERA_HEIGHT, cameraZ, width, height, track.roadHalfWidth);
     x += dx;
     dx += segment.curve;
     const p2 = projectPoint(x, 0, z2, game.cameraX, CAMERA_HEIGHT, cameraZ, width, height, track.roadHalfWidth);
@@ -139,9 +137,9 @@ function drawRoad(ctx, game, width, height) {
   }
 
   let lastY = height + 2;
-  for (let i = 0; i < projected.length - 1; i += 1) {
-    const far = projected[i];
-    const near = projected[i + 1];
+  for (let i = projected.length - 1; i > 0; i -= 1) {
+    const near = projected[i];
+    const far = projected[i - 1];
     const topY = Math.max(horizon, far.y);
     const bottomY = Math.min(lastY, near.y);
 
