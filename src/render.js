@@ -138,25 +138,24 @@ function drawRoad(ctx, game, width, height) {
     });
   }
 
-  let lastY = height + 2;
   for (let i = projected.length - 1; i > 0; i -= 1) {
-    const near = projected[i];
-    const far = projected[i - 1];
+    const far = projected[i];
+    const near = projected[i - 1];
     const topY = Math.max(horizon, far.y);
-    const bottomY = Math.min(lastY, near.y);
+    const bottomY = Math.min(height + 2, near.y);
 
     if (bottomY <= topY) continue;
 
-    const sideGrass = far.segment.colorIndex ? '#4ea748' : '#45953f';
-    const sideShade = far.segment.colorIndex ? 'rgba(36,82,31,0.2)' : 'rgba(24,68,21,0.2)';
-    const shoulder = far.segment.colorIndex ? '#d0d3d7' : '#bf5151';
-    const asphalt = far.segment.colorIndex ? '#656a71' : '#5d636a';
+    const sideGrass = near.segment.colorIndex ? '#4ea748' : '#45953f';
+    const sideShade = near.segment.colorIndex ? 'rgba(36,82,31,0.2)' : 'rgba(24,68,21,0.2)';
+    const shoulder = near.segment.colorIndex ? '#d0d3d7' : '#bf5151';
+    const asphalt = near.segment.colorIndex ? '#656a71' : '#5d636a';
 
     ctx.fillStyle = sideGrass;
     ctx.fillRect(0, topY, width, bottomY - topY);
 
     ctx.fillStyle = sideShade;
-    const patternOffset = ((far.n * 37) + dashedOffset * 5) % 90;
+    const patternOffset = ((near.n * 37) + dashedOffset * 5) % 90;
     ctx.fillRect((patternOffset + 16) % width, topY, 48, bottomY - topY);
     ctx.fillRect((patternOffset + width * 0.52) % width, topY, 48, bottomY - topY);
 
@@ -168,8 +167,11 @@ function drawRoad(ctx, game, width, height) {
       drawQuad(ctx, far.x, topY, far.roadW * 0.045, near.x, bottomY, near.roadW * 0.045, '#f5f5f5');
     }
 
-    renderRoadObjects(ctx, game, far.segIndex, { screenX: near.x, screenY: bottomY, roadW: near.roadW });
-    lastY = bottomY;
+    renderRoadObjects(ctx, game, near.segIndex, {
+      screenX: near.x,
+      screenY: bottomY,
+      roadW: near.roadW,
+    });
   }
 }
 
