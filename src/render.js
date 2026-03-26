@@ -3,6 +3,8 @@ import { segmentIndexAtZ, wrapZ } from './track.js';
 const FOV = 100;
 const CAMERA_HEIGHT = 900;
 const DRAW_DISTANCE = 220;
+const ROAD_BOTTOM_HALF_WIDTH_RATIO = 0.34;
+const ROAD_TOP_HALF_WIDTH_RATIO = 0.085;
 
 function projectPoint(worldX, worldY, worldZ, cameraX, cameraY, cameraZ, width, height, roadHalfWidth) {
   const dz = worldZ - cameraZ;
@@ -97,10 +99,14 @@ function drawBackground(ctx, game, width, height, horizon) {
 
 function drawRoad(ctx, game, width, height) {
   const { track, cameraZ } = game;
-  let baseIndex = segmentIndexAtZ(track, cameraZ);
+  const horizon = Math.floor(height * 0.35);
+  const baseIndex = segmentIndexAtZ(track, cameraZ);
+  const roadSpan = Math.max(1, height - horizon);
+  const dashedOffset = Math.floor(game.distance * 0.08);
+
   let x = 0;
   let dx = 0;
-  let maxY = height;
+  const projected = [];
 
   for (let n = 0; n < DRAW_DISTANCE; n += 1) {
     const segIndex = (baseIndex + n) % track.segments.length;
@@ -114,34 +120,55 @@ function drawRoad(ctx, game, width, height) {
     dx += segment.curve;
     const p2 = projectPoint(x, 0, z2, game.cameraX, CAMERA_HEIGHT, cameraZ, width, height, track.roadHalfWidth);
 
-    if (p1.dz <= 1 || p2.dz <= 1 || p2.screenY >= maxY) continue;
+    if (p2.dz <= 1) continue;
 
-    const grassA = segment.colorIndex ? '#56ab4d' : '#479742';
-    const grassB = segment.colorIndex ? 'rgba(44,91,35,0.13)' : 'rgba(60,107,47,0.1)';
-    const rumble = segment.colorIndex ? '#f4f4f4' : '#ca3f3f';
-    const road = segment.colorIndex ? '#66696d' : '#575b5f';
+    const clampedY = Math.max(horizon, Math.min(height + 2, p2.screenY));
+    const depth = Math.min(1, Math.max(0, (clampedY - horizon) / roadSpan));
+    const targetHalfWidth = width * (ROAD_TOP_HALF_WIDTH_RATIO + (ROAD_BOTTOM_HALF_WIDTH_RATIO - ROAD_TOP_HALF_WIDTH_RATIO) * depth);
+    const curveShift = (p2.screenX - width * 0.5) * 1.25;
 
-    ctx.fillStyle = grassA;
-    ctx.fillRect(0, p2.screenY, width, p1.screenY - p2.screenY);
+    projected.push({
+      y: clampedY,
+      x: width * 0.5 + curveShift,
+      roadW: targetHalfWidth,
+      segIndex,
+      segment,
+      n,
+    });
+  }
 
-    ctx.fillStyle = grassB;
-    for (let s = 0; s < width; s += 48) {
-      ctx.fillRect((s + n * 11) % width, p2.screenY, 24, p1.screenY - p2.screenY);
+  let lastY = height + 2;
+  for (let i = 0; i < projected.length - 1; i += 1) {
+    const far = projected[i];
+    const near = projected[i + 1];
+    const topY = Math.max(horizon, far.y);
+    const bottomY = Math.min(lastY, near.y);
+
+    if (bottomY <= topY) continue;
+
+    const sideGrass = far.segment.colorIndex ? '#4ea748' : '#45953f';
+    const sideShade = far.segment.colorIndex ? 'rgba(36,82,31,0.2)' : 'rgba(24,68,21,0.2)';
+    const shoulder = far.segment.colorIndex ? '#d0d3d7' : '#bf5151';
+    const asphalt = far.segment.colorIndex ? '#656a71' : '#5d636a';
+
+    ctx.fillStyle = sideGrass;
+    ctx.fillRect(0, topY, width, bottomY - topY);
+
+    ctx.fillStyle = sideShade;
+    const patternOffset = ((far.n * 37) + dashedOffset * 5) % 90;
+    ctx.fillRect((patternOffset + 16) % width, topY, 48, bottomY - topY);
+    ctx.fillRect((patternOffset + width * 0.52) % width, topY, 48, bottomY - topY);
+
+    drawQuad(ctx, far.x, topY, far.roadW * 1.14, near.x, bottomY, near.roadW * 1.14, shoulder);
+    drawQuad(ctx, far.x, topY, far.roadW * 1.04, near.x, bottomY, near.roadW * 1.04, '#f8f8f8');
+    drawQuad(ctx, far.x, topY, far.roadW, near.x, bottomY, near.roadW, asphalt);
+
+    if (((far.n + dashedOffset) % 14) < 7) {
+      drawQuad(ctx, far.x, topY, far.roadW * 0.045, near.x, bottomY, near.roadW * 0.045, '#f5f5f5');
     }
 
-    drawQuad(ctx, p1.screenX, p1.screenY, p1.roadW * 1.17, p2.screenX, p2.screenY, p2.roadW * 1.17, rumble);
-    drawQuad(ctx, p1.screenX, p1.screenY, p1.roadW, p2.screenX, p2.screenY, p2.roadW, road);
-
-    if (n % 3 === 0) {
-      drawQuad(ctx, p1.screenX, p1.screenY, p1.roadW * 0.06, p2.screenX, p2.screenY, p2.roadW * 0.06, '#ececec');
-    }
-
-    if (n % 2 === 0) {
-      drawQuad(ctx, p1.screenX, p1.screenY, p1.roadW * 0.9, p2.screenX, p2.screenY, p2.roadW * 0.9, 'rgba(255,255,255,0.03)');
-    }
-
-    renderRoadObjects(ctx, game, segIndex, p2);
-    maxY = p2.screenY;
+    renderRoadObjects(ctx, game, far.segIndex, { screenX: near.x, screenY: bottomY, roadW: near.roadW });
+    lastY = bottomY;
   }
 }
 
