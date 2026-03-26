@@ -1,12 +1,22 @@
 export function drawHud(ctx, game, canvas) {
   const speedKmh = Math.round(game.player.speed * 1.45);
+  const avgKmh = Math.round(game.avgSpeed * 1.45);
   ctx.fillStyle = 'rgba(5,10,24,0.55)';
-  ctx.fillRect(16, 16, 260, 84);
+  ctx.fillRect(16, 16, 290, 124);
 
   ctx.fillStyle = '#dce9ff';
   ctx.font = '700 20px Segoe UI';
   ctx.fillText(`Velocità: ${speedKmh} km/h`, 28, 48);
   ctx.fillText(`Distanza: ${Math.floor(game.distance)} m`, 28, 78);
+  ctx.fillText(`Media: ${avgKmh} km/h`, 28, 108);
+
+  ctx.fillStyle = 'rgba(5,10,24,0.55)';
+  ctx.fillRect(canvas.width - 220, 16, 200, 74);
+  ctx.fillStyle = '#f8fbff';
+  ctx.font = '800 18px Segoe UI';
+  ctx.fillText('Punteggio', canvas.width - 198, 44);
+  ctx.font = '800 28px Segoe UI';
+  ctx.fillText(`${game.score}`, canvas.width - 198, 78);
 
   if (game.offRoad) {
     ctx.fillStyle = '#ffbc42';
@@ -15,13 +25,13 @@ export function drawHud(ctx, game, canvas) {
   }
 
   if (game.state === 'start') {
-    drawOverlay(ctx, canvas, '2D RALLY ARCADE', 'Premi INVIO o SPAZIO per iniziare');
+    drawOverlay(ctx, canvas, '2D RALLY ARCADE', 'Premi SPAZIO per iniziare');
   } else if (game.state === 'gameover') {
     drawOverlay(
       ctx,
       canvas,
       'GAME OVER',
-      `Distanza: ${Math.floor(game.distance)} m · Premi R per ripartire`,
+      `Score: ${game.score} · Distanza: ${Math.floor(game.distance)} m · Premi R`,
     );
   }
 }
