@@ -1,53 +1,44 @@
-# 2dRally
+# 2dRally (Browser Edition)
 
-## Obiettivo del progetto
-2dRally mira a diventare un semplice gioco di corse in 2D, ispirato ai rally classici.
-L'obiettivo è offrire un esempio didattico di sviluppo di videogiochi in Python
-utilizzando la libreria Pygame.
+Gioco rally arcade pseudo-3D giocabile direttamente da browser con `Canvas 2D`.
 
-## Stato attuale
-Il progetto è nelle fasi iniziali e non include ancora il gameplay completo.
-Il file `src/main.py` contiene un loop Pygame minimale da cui iniziare lo sviluppo.
+## Caratteristiche implementate
+- Visuale terza persona con auto del giocatore vista da dietro, in basso allo schermo.
+- Strada pseudo-3D a segmenti con prospettiva e curve cumulative.
+- Controlli arcade (`WASD` o frecce) con accelerazione, frenata e sterzo.
+- Penalità fuori strada.
+- Ostacoli + traffico semplice con collisioni.
+- Start screen, HUD (velocità/distanza), game over e restart.
 
-## Dipendenze
-- Python 3.x
-- [Pygame](https://www.pygame.org/) – installabile con:
-  ```bash
-  pip install pygame
-  ```
+## Struttura
+- `index.html`
+- `style.css`
+- `src/main.js`
+- `src/game.js`
+- `src/render.js`
+- `src/input.js`
+- `src/track.js`
+- `src/entities.js`
+- `src/ui.js`
 
-## Avvio del gioco
-1. Installare le dipendenze indicate.
-2. Avviare l'applicazione eseguendo:
-   ```bash
-   python src/main.py
-   ```
+## Avvio rapido
+Nessun backend richiesto.
 
-### Modalità headless
-In ambienti senza display (ad esempio integrazione continua), il gioco può
-essere eseguito in modalità *headless* utilizzando il driver video ``dummy``.
-Per forzare la modalità headless è possibile impostare la variabile
-``PYGAME_HEADLESS`` a ``1`` prima di avviare lo script:
+Opzione 1: apri direttamente `index.html` nel browser.
 
+Opzione 2 (consigliata per evitare limiti di sicurezza locali):
 ```bash
-PYGAME_HEADLESS=1 python src/main.py
+python -m http.server 8000
 ```
+Poi apri `http://localhost:8000`.
 
-Impostando ``PYGAME_HEADLESS`` a ``0`` si disabilita la modalità headless,
-forzando l'uso del driver video standard. Se la variabile non è definita, la
-modalità headless viene attivata automaticamente solo quando non è rilevato
-alcun display.
-
-## Controlli da tastiera
-- **Freccia su** – accelera
-- **Freccia giù** – frena o retromarcia
-- **Freccia sinistra/destra** – sterza
-- **Esc** – chiude il gioco
-
-## Contributi futuri
-Le proposte di miglioramento sono benvenute. Aprite una issue o una pull request
-per discutere nuove funzionalità, correzioni di bug o idee di design.
+## Controlli
+- `↑` / `W`: accelera
+- `↓` / `S`: frena
+- `←` / `A`: sterza sinistra
+- `→` / `D`: sterza destra
+- `Invio` o `Spazio`: avvia
+- `R`: restart dopo game over
 
 ## Licenza
-Questo progetto è distribuito sotto la licenza MIT. Vedere il file `LICENSE`
-per i dettagli completi.
+MIT (`LICENSE`).
