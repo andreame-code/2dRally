@@ -39,6 +39,7 @@ Poi apri `http://localhost:8000`.
 - `→` / `D`: sterza destra
 - `Invio` o `Spazio`: avvia
 - `R`: restart dopo game over
+- Mobile: pulsanti touch a schermo (sterzo, accelera, frena, start/restart)
 
 ## Licenza
 MIT (`LICENSE`).
