@@ -35,3 +35,54 @@ body {
   background: #7ec4ff;
   box-shadow: 0 20px 40px rgb(0 0 0 / 40%);
 }
+
+.mobile-controls {
+  display: none;
+}
+
+@media (max-width: 1024px), (hover: none) and (pointer: coarse) {
+  .mobile-controls {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 0.85rem;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+  }
+
+  .mobile-controls__dpad,
+  .mobile-controls__actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .mobile-btn {
+    min-width: 62px;
+    min-height: 62px;
+    border: 2px solid #6aa5ff;
+    border-radius: 14px;
+    background: rgba(16, 24, 39, 0.8);
+    color: #eaf3ff;
+    font-weight: 800;
+    font-size: 1.2rem;
+    box-shadow: 0 10px 18px rgb(0 0 0 / 35%);
+  }
+
+  .mobile-btn.is-pressed {
+    transform: translateY(1px) scale(0.97);
+    background: rgba(106, 165, 255, 0.35);
+    border-color: #9ec4ff;
+  }
+
+  .mobile-btn--primary {
+    background: rgba(33, 94, 180, 0.9);
+  }
+
+  .mobile-btn--start {
+    min-width: 88px;
+    font-size: 0.95rem;
+    letter-spacing: 0.04em;
+  }
+}
