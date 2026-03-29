@@ -7,6 +7,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: gh-pages-deploy
+  cancel-in-progress: false
+
 jobs:
   cleanup-preview:
     runs-on: ubuntu-latest
@@ -14,7 +18,7 @@ jobs:
       - name: Extract preview name
         id: preview
         run: |
-          BRANCH="${{ github.head_ref }}"
+          BRANCH="${{ github.event.pull_request.head.ref }}"
           PREVIEW_NAME="${BRANCH##*/}"
           PREVIEW_NAME=$(echo "$PREVIEW_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
           echo "name=$PREVIEW_NAME" >> "$GITHUB_OUTPUT"
