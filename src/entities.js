@@ -4,36 +4,27 @@ export function createPlayer() {
     laneVelocity: 0,
     steering: 0,
     speed: 0,
-    maxSpeed: 320,
-    accel: 140,
-    brake: 280,
-    drag: 40,
-    steerPower: 1.85,
-    steerResponse: 4.5,
-    steerFriction: 5.2,
-    driftGrip: 0.88,
-    offRoadGrip: 0.72,
-  };
-}
-
-export function createAiCar(trackLength, lane = 0, z = 0, speed = 100) {
-  const colors = ['#2f4ac7', '#b93f2d', '#3f9b52', '#6f39b4'];
-  return {
-    laneOffset: lane,
-    z: ((z % trackLength) + trackLength) % trackLength,
-    speed,
-    widthFactor: 0.32,
-    color: colors[Math.floor(Math.random() * colors.length)],
-    active: true,
+    maxSpeed: 300,
+    accel: 120,
+    brake: 260,
+    drag: 35,
+    steerPower: 2.1,
+    steerResponse: 3.8,
+    steerFriction: 4.8,
+    driftGrip: 0.82,
+    offRoadGrip: 0.62,
+    gear: 1,
+    rpm: 0,
+    damage: 0,
   };
 }
 
 export function createObstacle(trackLength, lane = 0, z = 0) {
-  const types = ['cone', 'rock', 'hole'];
+  const types = ['rock', 'log', 'puddle'];
   return {
     laneOffset: lane,
     z: ((z % trackLength) + trackLength) % trackLength,
-    widthFactor: 0.24,
+    widthFactor: 0.26,
     type: types[Math.floor(Math.random() * types.length)],
     active: true,
   };
