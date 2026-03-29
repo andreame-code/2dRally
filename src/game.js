@@ -1,6 +1,6 @@
 import { Input } from './input.js';
-import { createAiCar, createObstacle, createPlayer } from './entities.js';
-import { createTrack, segmentIndexAtZ, wrapZ } from './track.js';
+import { createObstacle, createPlayer } from './entities.js';
+import { createTrack, segmentIndexAtZ, wrapZ, getPaceNotes } from './track.js';
 import { renderWorld } from './render.js';
 import { drawHud } from './ui.js';
 
@@ -18,8 +18,12 @@ export class Game {
 
   reset() {
     this.state = 'start';
+    this.startLock = true;
     this.distance = 0;
-    this.score = 0;
+    this.stageTime = 0;
+    this.stageLength = 5000;
+    this.bestTime = 0;
+    this.laps = 0;
     this.avgSpeed = 0;
     this.runTime = 0;
     this.cameraZ = 0;
@@ -28,30 +32,31 @@ export class Game {
     this.player.laneVelocity = 0;
     this.player.steering = 0;
     this.player.speed = 0;
+    this.player.gear = 1;
+    this.player.rpm = 0;
+    this.player.damage = 0;
     this.offRoad = false;
     this.flashTimer = 0;
     this.controlLoss = 0;
     this.shake = 0;
     this.obstacleSpawnTimer = 0;
-    this.aiSpawnTimer = 0;
+    this.paceNotes = [];
+    this.dustParticles = [];
 
     this.obstacles = [
-      createObstacle(this.track.length, -0.55, 1000),
-      createObstacle(this.track.length, 0.5, 1750),
-      createObstacle(this.track.length, -0.1, 2450),
-      createObstacle(this.track.length, 0.28, 3250),
-    ];
-
-    this.aiCars = [
-      createAiCar(this.track.length, -0.25, 1300, 105),
-      createAiCar(this.track.length, 0.25, 2100, 120),
-      createAiCar(this.track.length, 0.05, 2900, 96),
+      createObstacle(this.track.length, -0.55, 800),
+      createObstacle(this.track.length, 0.5, 1500),
+      createObstacle(this.track.length, -0.1, 2200),
+      createObstacle(this.track.length, 0.28, 3000),
+      createObstacle(this.track.length, -0.4, 3800),
+      createObstacle(this.track.length, 0.35, 4500),
     ];
   }
 
   update(dt) {
     if (this.state === 'start') {
-      if (this.input.pressed('Enter', 'Space')) this.state = 'running';
+      if (!this.input.pressed('Enter', 'Space')) this.startLock = false;
+      if (!this.startLock && this.input.pressed('Enter', 'Space')) this.state = 'running';
       return;
     }
 
@@ -62,10 +67,10 @@ export class Game {
 
     this.updatePlayer(dt);
     this.updateCamera(dt);
-    this.updateTraffic(dt);
     this.updateGameplay(dt);
     this.handleCollisions();
     this.updateEffects(dt);
+    this.updateDust(dt);
   }
 
   updatePlayer(dt) {
@@ -81,9 +86,18 @@ export class Game {
     p.speed -= p.drag * dt;
     p.speed = Math.max(0, Math.min(p.maxSpeed, p.speed));
 
+    // Gear & RPM simulation
+    const speedRatio = p.speed / p.maxSpeed;
+    p.gear = speedRatio < 0.15 ? 1 : speedRatio < 0.3 ? 2 : speedRatio < 0.5 ? 3 : speedRatio < 0.72 ? 4 : speedRatio < 0.9 ? 5 : 6;
+    const gearRanges = [0, 0.15, 0.3, 0.5, 0.72, 0.9, 1.0];
+    const gearLow = gearRanges[p.gear - 1];
+    const gearHigh = gearRanges[p.gear];
+    p.rpm = (speedRatio - gearLow) / (gearHigh - gearLow);
+    p.rpm = Math.max(0, Math.min(1, p.rpm));
+
     const seg = this.track.segments[segmentIndexAtZ(this.track, this.cameraZ)];
     const curveForce = seg.curve * (0.8 + p.speed / p.maxSpeed * 2.1);
-    p.laneVelocity -= curveForce * dt * 115;
+    p.laneVelocity -= curveForce * dt * 130;
 
     const steerTarget = (steerRight ? 1 : 0) - (steerLeft ? 1 : 0);
     p.steering += (steerTarget - p.steering) * Math.min(1, p.steerResponse * dt);
@@ -91,9 +105,10 @@ export class Game {
     const speedFactor = 0.3 + p.speed / p.maxSpeed;
     p.laneVelocity += p.steering * p.steerPower * dt * speedFactor;
 
-    const highSpeed = Math.max(0, (p.speed - p.maxSpeed * 0.62) / p.maxSpeed);
-    const driftFactor = highSpeed * (Math.abs(p.steering) + Math.abs(seg.curve) * 180);
-    p.laneVelocity *= 1 - Math.min(0.23, driftFactor * 0.04);
+    // Dirt/gravel physics: more sliding, less grip
+    const highSpeed = Math.max(0, (p.speed - p.maxSpeed * 0.55) / p.maxSpeed);
+    const driftFactor = highSpeed * (Math.abs(p.steering) + Math.abs(seg.curve) * 200);
+    p.laneVelocity *= 1 - Math.min(0.28, driftFactor * 0.05);
     p.laneVelocity *= 1 - Math.min(0.98, p.steerFriction * dt);
 
     p.laneOffset += p.laneVelocity;
@@ -102,14 +117,14 @@ export class Game {
     p.laneVelocity *= grip;
 
     if (this.offRoad) {
-      p.speed -= 140 * dt;
-      p.laneVelocity += (Math.random() - 0.5) * 0.002;
-      p.laneOffset = Math.max(-1.25, Math.min(1.25, p.laneOffset));
+      p.speed -= 160 * dt;
+      p.laneVelocity += (Math.random() - 0.5) * 0.003;
+      p.laneOffset = Math.max(-1.35, Math.min(1.35, p.laneOffset));
     }
 
     if (this.controlLoss > 0) {
       this.controlLoss -= dt;
-      p.laneVelocity += Math.sin(performance.now() * 0.03) * 0.0008;
+      p.laneVelocity += Math.sin(performance.now() * 0.03) * 0.001;
     }
   }
 
@@ -123,31 +138,27 @@ export class Game {
     this.cameraX *= 0.96;
   }
 
-  updateTraffic(dt) {
-    this.aiCars.forEach((car) => {
-      car.z = wrapZ(this.track, car.z + car.speed * dt);
-      if (Math.random() < 0.004) {
-        car.laneOffset += (Math.random() - 0.5) * 0.15;
-        car.laneOffset = Math.max(-0.75, Math.min(0.75, car.laneOffset));
-      }
-    });
-  }
-
   updateGameplay(dt) {
     this.runTime += dt;
+    this.stageTime += dt;
     this.avgSpeed += (this.player.speed - this.avgSpeed) * Math.min(1, dt * 0.7);
-    this.score = Math.floor(this.distance + this.avgSpeed * 4.2);
+
+    // Pace notes
+    this.paceNotes = getPaceNotes(this.track, this.cameraZ, 120);
 
     this.obstacleSpawnTimer -= dt;
     if (this.obstacleSpawnTimer <= 0) {
       this.spawnObstacle();
-      this.obstacleSpawnTimer = 1.2 + Math.random() * 1.5;
+      this.obstacleSpawnTimer = 1.8 + Math.random() * 2.0;
     }
 
-    this.aiSpawnTimer -= dt;
-    if (this.aiSpawnTimer <= 0 && this.aiCars.length < 6) {
-      this.spawnAiCar();
-      this.aiSpawnTimer = 2.8 + Math.random() * 2.2;
+    // Stage completion
+    if (this.distance >= this.stageLength) {
+      if (this.bestTime === 0 || this.stageTime < this.bestTime) {
+        this.bestTime = this.stageTime;
+      }
+      this.laps += 1;
+      this.state = 'gameover';
     }
   }
 
@@ -156,20 +167,60 @@ export class Game {
     this.shake = Math.max(0, this.shake - dt * 2.4);
   }
 
+  updateDust(dt) {
+    // Spawn dust when driving fast or drifting
+    if (this.player.speed > 40 && this.state === 'running') {
+      const intensity = Math.min(3, Math.floor(this.player.speed / 80));
+      for (let i = 0; i < intensity; i++) {
+        this.dustParticles.push({
+          x: (Math.random() - 0.5) * 60,
+          y: 0,
+          vx: (Math.random() - 0.5) * 30,
+          vy: -15 - Math.random() * 25,
+          life: 0.4 + Math.random() * 0.5,
+          maxLife: 0.4 + Math.random() * 0.5,
+          size: 3 + Math.random() * 5,
+        });
+      }
+    }
+
+    // Extra dust when off-road
+    if (this.offRoad && this.player.speed > 20) {
+      for (let i = 0; i < 2; i++) {
+        this.dustParticles.push({
+          x: (Math.random() - 0.5) * 80,
+          y: 0,
+          vx: (Math.random() - 0.5) * 50,
+          vy: -10 - Math.random() * 20,
+          life: 0.5 + Math.random() * 0.6,
+          maxLife: 0.5 + Math.random() * 0.6,
+          size: 5 + Math.random() * 8,
+        });
+      }
+    }
+
+    // Update particles
+    for (let i = this.dustParticles.length - 1; i >= 0; i--) {
+      const p = this.dustParticles[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.life -= dt;
+      if (p.life <= 0) {
+        this.dustParticles.splice(i, 1);
+      }
+    }
+
+    if (this.dustParticles.length > 80) {
+      this.dustParticles.splice(0, this.dustParticles.length - 80);
+    }
+  }
+
   spawnObstacle() {
     const spawnZ = wrapZ(this.track, this.cameraZ + 900 + Math.random() * 1200);
     const lanes = [-0.58, -0.35, -0.1, 0.12, 0.37, 0.62];
     const lane = lanes[Math.floor(Math.random() * lanes.length)];
     this.obstacles.push(createObstacle(this.track.length, lane, spawnZ));
-    if (this.obstacles.length > 15) this.obstacles.shift();
-  }
-
-  spawnAiCar() {
-    const spawnZ = wrapZ(this.track, this.cameraZ + 1200 + Math.random() * 1700);
-    const lane = -0.5 + Math.random();
-    const speed = 90 + Math.random() * 65;
-    this.aiCars.push(createAiCar(this.track.length, lane, spawnZ, speed));
-    if (this.aiCars.length > 7) this.aiCars.shift();
+    if (this.obstacles.length > 18) this.obstacles.shift();
   }
 
   handleCollisions() {
@@ -180,33 +231,22 @@ export class Game {
       const dz = (obstacle.z - this.cameraZ + this.track.length) % this.track.length;
       if (dz < hitWindow && Math.abs(obstacle.laneOffset - this.player.laneOffset) < 0.24) {
         obstacle.z = wrapZ(this.track, obstacle.z + 1400 + Math.random() * 800);
-        const impact = obstacle.type === 'hole' ? 0.5 : obstacle.type === 'rock' ? 0.42 : 0.56;
+        const impact = obstacle.type === 'puddle' ? 0.65 : obstacle.type === 'rock' ? 0.4 : 0.5;
         this.player.speed *= impact;
         this.player.laneVelocity += (Math.random() - 0.5) * 0.05;
-        this.controlLoss = Math.max(this.controlLoss, obstacle.type === 'hole' ? 0.85 : 0.7);
-        this.shake = 0.45;
-        this.flashTimer = 0.2;
+        this.controlLoss = Math.max(this.controlLoss, obstacle.type === 'puddle' ? 0.6 : 0.8);
+        this.shake = obstacle.type === 'puddle' ? 0.2 : 0.5;
+        this.flashTimer = 0.15;
+        this.player.damage = Math.min(1, this.player.damage + (obstacle.type === 'rock' ? 0.18 : 0.08));
         hit = true;
       }
     }
 
-    for (const ai of this.aiCars) {
-      const dz = (ai.z - this.cameraZ + this.track.length) % this.track.length;
-      if (dz < hitWindow && Math.abs(ai.laneOffset - this.player.laneOffset) < 0.26) {
-        this.player.speed *= 0.7;
-        this.player.laneVelocity += (Math.random() - 0.5) * 0.04;
-        this.controlLoss = Math.max(this.controlLoss, 0.45);
-        this.shake = 0.3;
-        this.flashTimer = 0.12;
-        hit = true;
-      }
-    }
-
-    if (hit && this.player.speed < 22) {
+    if (hit && this.player.speed < 18) {
       this.state = 'gameover';
     }
 
-    if (this.distance >= 5000) {
+    if (this.player.damage >= 1) {
       this.state = 'gameover';
     }
   }
