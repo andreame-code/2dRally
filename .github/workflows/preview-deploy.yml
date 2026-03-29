@@ -8,6 +8,10 @@ permissions:
   contents: write
   pull-requests: write
 
+concurrency:
+  group: gh-pages-deploy
+  cancel-in-progress: false
+
 jobs:
   deploy-preview:
     runs-on: ubuntu-latest
@@ -19,7 +23,7 @@ jobs:
         id: preview
         run: |
           # Use the branch name after the last slash, sanitized
-          BRANCH="${{ github.head_ref }}"
+          BRANCH="${{ github.event.pull_request.head.ref }}"
           PREVIEW_NAME="${BRANCH##*/}"
           PREVIEW_NAME=$(echo "$PREVIEW_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
           echo "name=$PREVIEW_NAME" >> "$GITHUB_OUTPUT"
