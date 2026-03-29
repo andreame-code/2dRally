@@ -111,7 +111,8 @@ export class Game {
     p.laneVelocity *= 1 - Math.min(0.28, driftFactor * 0.05);
     p.laneVelocity *= 1 - Math.min(0.98, p.steerFriction * dt);
 
-    p.laneOffset += p.laneVelocity;
+    // Integrate lateral movement with delta-time so lane drift stays frame-rate independent.
+    p.laneOffset += p.laneVelocity * dt;
     this.offRoad = Math.abs(p.laneOffset) > 0.95;
     const grip = this.offRoad ? p.offRoadGrip : p.driftGrip;
     p.laneVelocity *= grip;
@@ -121,6 +122,9 @@ export class Game {
       p.laneVelocity += (Math.random() - 0.5) * 0.003;
       p.laneOffset = Math.max(-1.35, Math.min(1.35, p.laneOffset));
     }
+
+    // Keep the car recoverable even after strong drifts/impacts.
+    p.laneOffset = Math.max(-1.35, Math.min(1.35, p.laneOffset));
 
     if (this.controlLoss > 0) {
       this.controlLoss -= dt;
