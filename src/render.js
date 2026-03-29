@@ -65,7 +65,7 @@ function drawBackground(ctx, game, width, height, horizon) {
 
   const farMountains = '#5c7ca7';
   for (let i = 0; i < 6; i += 1) {
-    const x = ((i * 270 - game.distance * 0.03) % (width + 450)) - 220;
+    const x = (((i * 270 - game.distance * 0.03) % (width + 450)) + (width + 450)) % (width + 450) - 220;
     ctx.fillStyle = farMountains;
     ctx.beginPath();
     ctx.moveTo(x, horizon);
@@ -77,7 +77,7 @@ function drawBackground(ctx, game, width, height, horizon) {
 
   const hillColor = 'rgba(53,109,52,0.75)';
   for (let i = 0; i < 8; i += 1) {
-    const hillX = ((i * 180 - game.distance * 0.07) % (width + 320)) - 160;
+    const hillX = (((i * 180 - game.distance * 0.07) % (width + 320)) + (width + 320)) % (width + 320) - 160;
     ctx.fillStyle = hillColor;
     ctx.beginPath();
     ctx.ellipse(hillX, horizon + 20, 170, 55, 0, 0, Math.PI * 2);

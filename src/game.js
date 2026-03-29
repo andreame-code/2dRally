@@ -18,6 +18,7 @@ export class Game {
 
   reset() {
     this.state = 'start';
+    this.startLock = true;
     this.distance = 0;
     this.score = 0;
     this.avgSpeed = 0;
@@ -51,7 +52,8 @@ export class Game {
 
   update(dt) {
     if (this.state === 'start') {
-      if (this.input.pressed('Enter', 'Space')) this.state = 'running';
+      if (!this.input.pressed('Enter', 'Space')) this.startLock = false;
+      if (!this.startLock && this.input.pressed('Enter', 'Space')) this.state = 'running';
       return;
     }
 
@@ -96,6 +98,9 @@ export class Game {
     p.laneVelocity *= 1 - Math.min(0.23, driftFactor * 0.04);
     p.laneVelocity *= 1 - Math.min(0.98, p.steerFriction * dt);
 
+    // NOTE: position integration without dt is frame-rate dependent,
+    // but the entire velocity/friction model is tuned for per-frame steps.
+    // A full fix would require retuning all physics constants.
     p.laneOffset += p.laneVelocity;
     this.offRoad = Math.abs(p.laneOffset) > 0.95;
     const grip = this.offRoad ? p.offRoadGrip : p.driftGrip;
@@ -145,7 +150,7 @@ export class Game {
     }
 
     this.aiSpawnTimer -= dt;
-    if (this.aiSpawnTimer <= 0 && this.aiCars.length < 6) {
+    if (this.aiSpawnTimer <= 0 && this.aiCars.length < 7) {
       this.spawnAiCar();
       this.aiSpawnTimer = 2.8 + Math.random() * 2.2;
     }
@@ -193,6 +198,7 @@ export class Game {
     for (const ai of this.aiCars) {
       const dz = (ai.z - this.cameraZ + this.track.length) % this.track.length;
       if (dz < hitWindow && Math.abs(ai.laneOffset - this.player.laneOffset) < 0.26) {
+        ai.z = wrapZ(this.track, ai.z + 800 + Math.random() * 600);
         this.player.speed *= 0.7;
         this.player.laneVelocity += (Math.random() - 0.5) * 0.04;
         this.controlLoss = Math.max(this.controlLoss, 0.45);
